@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - My Ads</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">📦 My Ads Admin</a>
+            <div class="nav-links">
+                <span style="color: var(--text-secondary);">Admin Panel</span>
+                <button onclick="logout()" class="btn btn-outline">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">Pending Approvals</h1>
+
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <div id="adsContainer" class="admin-table" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Posted By</th>
+                        <th>WhatsApp</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="adsTableBody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyState" class="empty-state hidden">
+            <div class="empty-state-icon">✅</div>
+            <h3>No pending ads</h3>
+            <p>All ads have been reviewed!</p>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!requireAdmin()) {
+            throw new Error('Admin access required');
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPendingAds);
+
+        async function loadPendingAds() {
+            const loading = document.getElementById('loadingState');
+            const container = document.getElementById('adsContainer');
+            const empty = document.getElementById('emptyState');
+            
+            try {
+                const ads = await getPendingAds();
+                
+                loading.classList.add('hidden');
+                
+                if (ads.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                
+                container.style.display = 'block';
+                renderAds(ads);
+            } catch (error) {
+                loading.classList.add('hidden');
+                alert('Failed to load ads: ' + error.message);
+            }
+        }
+
+        function renderAds(ads) {
+            const tbody = document.getElementById('adsTableBody');
+            tbody.innerHTML = ads.map(ad => `
+                <tr data-id="${ad.id}">
+                    <td>
+                        <img src="${ad.imageUrl ? 'http://localhost:8080' + ad.imageUrl : 'https://via.placeholder.com/80x60?text=No+Image'}" 
+                             alt="${ad.title}">
+                    </td>
+                    <td>
+                        <strong>${escapeHtml(ad.title)}</strong>
+                        <br>
+                        <small style="color: var(--text-secondary);">
+                            ${escapeHtml(ad.description.substring(0, 100))}...
+                        </small>
+                    </td>
+                    <td>${ad.category}</td>
+                    <td>${escapeHtml(ad.userName)}</td>
+                    <td>
+                        <a href="https://wa.me/${ad.whatsappNumber.replace(/\D/g, '')}" target="_blank">
+                            ${ad.whatsappNumber}
+                        </a>
+                    </td>
+                    <td>${new Date(ad.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button onclick="handleApprove(${ad.id})" class="btn btn-success" style="padding: 0.25rem 0.75rem;">
+                                ✓ Approve
+                            </button>
+                            <button onclick="handleReject(${ad.id})" class="btn btn-danger" style="padding: 0.25rem 0.75rem;">
+                                ✗ Reject
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function handleApprove(adId) {
+            if (!confirm('Are you sure you want to approve this ad?')) return;
+            
+            try {
+                await approveAd(adId);
+                // Remove row
+                document.querySelector(`tr[data-id="${adId}"]`).remove();
+                checkEmpty();
+            } catch (error) {
+                alert('Failed to approve: ' + error.message);
+            }
+        }
+
+        async function handleReject(adId) {
+            if (!confirm('Are you sure you want to reject this ad?')) return;
+            
+            try {
+                await rejectAd(adId);
+                // Remove row
+                document.querySelector(`tr[data-id="${adId}"]`).remove();
+                checkEmpty();
+            } catch (error) {
+                alert('Failed to reject: ' + error.message);
+            }
+        }
+
+        function checkEmpty() {
+            const tbody = document.getElementById('adsTableBody');
+            const empty = document.getElementById('emptyState');
+            const container = document.getElementById('adsContainer');
+            
+            if (tbody.children.length === 0) {
+                container.style.display = 'none';
+                empty.classList.remove('hidden');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

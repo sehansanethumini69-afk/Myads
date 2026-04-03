@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Ads - Classified Ads Platform</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">📦 My Ads</a>
+            <div class="nav-links" id="authLinks">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="main-layout">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <h3 class="sidebar-title">Categories</h3>
+                <ul class="category-list">
+                    <li class="category-item active" onclick="filterCategory('all')">All Categories</li>
+                    <li class="category-item" onclick="filterCategory('PERSONAL')">👤 Personal</li>
+                    <li class="category-item" onclick="filterCategory('PRODUCT')">🛍️ Product</li>
+                </ul>
+                
+                <div style="margin-top: 2rem;">
+                    <a href="post-ad.html" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                        + Post New Ad
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Main Area -->
+            <main>
+                <!-- Search -->
+                <div class="search-section">
+                    <div class="search-bar">
+                        <input type="text" class="search-input" id="searchInput" 
+                               placeholder="Search ads..." onkeyup="handleSearch(event)">
+                        <button class="btn btn-primary" onclick="performSearch()">Search</button>
+                    </div>
+                </div>
+
+                <!-- Ads Grid -->
+                <div id="adsContainer" class="ads-grid">
+                    <!-- Dynamic content -->
+                </div>
+
+                <div id="loadingState" class="loading hidden">
+                    <div class="spinner"></div>
+                </div>
+
+                <div id="emptyState" class="empty-state hidden">
+                    <div class="empty-state-icon">📭</div>
+                    <h3>No ads found</h3>
+                    <p>Be the first to post an ad!</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let currentCategory = 'all';
+        let currentAds = [];
+
+        // Load ads on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAds();
+        });
+
+        async function loadAds() {
+            const container = document.getElementById('adsContainer');
+            const loading = document.getElementById('loadingState');
+            const empty = document.getElementById('emptyState');
+
+            try {
+                container.innerHTML = '';
+                loading.classList.remove('hidden');
+                empty.classList.add('hidden');
+
+                currentAds = await getApprovedAds();
+                
+                if (currentCategory !== 'all') {
+                    currentAds = currentAds.filter(ad => ad.category === currentCategory);
+                }
+
+                loading.classList.add('hidden');
+
+                if (currentAds.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                renderAds(currentAds);
+            } catch (error) {
+                loading.classList.add('hidden');
+                container.innerHTML = `<div class="error-message">Failed to load ads: ${error.message}</div>`;
+            }
+        }
+
+        function renderAds(ads) {
+            const container = document.getElementById('adsContainer');
+            container.innerHTML = ads.map(ad => `
+                <div class="ad-card" onclick="viewAd(${ad.id})">
+                    <img src="${ad.imageUrl ? 'http://localhost:8080' + ad.imageUrl : 'https://via.placeholder.com/300x200?text=No+Image'}" 
+                         alt="${ad.title}" class="ad-image">
+                    <div class="ad-content">
+                        <h3 class="ad-title">${escapeHtml(ad.title)}</h3>
+                        <p class="ad-description">${escapeHtml(ad.description)}</p>
+                        <div class="ad-meta">
+                            <span class="ad-category">${ad.category}</span>
+                            <span>👁 ${ad.views} views</span>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <a href="https://wa.me/${ad.whatsappNumber.replace(/\D/g, '')}" 
+                               target="_blank" 
+                               class="whatsapp-btn"
+                               onclick="event.stopPropagation()">
+                                💬 WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterCategory(category) {
+            currentCategory = category;
+            
+            // Update active state
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            loadAds();
+        }
+
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                loadAds();
+                return;
+            }
+
+            const container = document.getElementById('adsContainer');
+            const loading = document.getElementById('loadingState');
+            
+            try {
+                container.innerHTML = '';
+                loading.classList.remove('hidden');
+                
+                const ads = await searchAds(query);
+                loading.classList.add('hidden');
+                renderAds(ads);
+            } catch (error) {
+                loading.classList.add('hidden');
+                container.innerHTML = `<div class="error-message">Search failed: ${error.message}</div>`;
+            }
+        }
+
+        function viewAd(adId) {
+            // Navigate to ad detail page or show modal
+            window.location.href = `ad-detail.html?id=${adId}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

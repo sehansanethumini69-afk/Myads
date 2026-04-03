@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Ads - My Ads</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">📦 My Ads</a>
+            <div class="nav-links" id="authLinks"></div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>My Advertisements</h1>
+            <a href="post-ad.html" class="btn btn-primary">+ Post New Ad</a>
+        </div>
+
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <div id="adsContainer" class="admin-table" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Views</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="adsTableBody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyState" class="empty-state hidden">
+            <div class="empty-state-icon">📭</div>
+            <h3>No ads yet</h3>
+            <p>Start by posting your first ad!</p>
+            <a href="post-ad.html" class="btn btn-primary mt-4">Post Ad</a>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!requireAuth()) {
+            throw new Error('Authentication required');
+        }
+
+        document.addEventListener('DOMContentLoaded', loadMyAds);
+
+        async function loadMyAds() {
+            const loading = document.getElementById('loadingState');
+            const container = document.getElementById('adsContainer');
+            const empty = document.getElementById('emptyState');
+            
+            try {
+                const ads = await getMyAds();
+                
+                loading.classList.add('hidden');
+                
+                if (ads.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                
+                container.style.display = 'block';
+                renderAds(ads);
+            } catch (error) {
+                loading.classList.add('hidden');
+                alert('Failed to load ads: ' + error.message);
+            }
+        }
+
+        function renderAds(ads) {
+            const tbody = document.getElementById('adsTableBody');
+            tbody.innerHTML = ads.map(ad => `
+                <tr>
+                    <td>
+                        <img src="${ad.imageUrl ? 'http://localhost:8080' + ad.imageUrl : 'https://via.placeholder.com/80x60?text=No+Image'}" 
+                             alt="${ad.title}">
+                    </td>
+                    <td>
+                        <strong>${escapeHtml(ad.title)}</strong>
+                        <br>
+                        <small style="color: var(--text-secondary);">
+                            ${escapeHtml(ad.description.substring(0, 50))}...
+                        </small>
+                    </td>
+                    <td>${ad.category}</td>
+                    <td>
+                        <span class="status-badge status-${ad.status.toLowerCase()}">
+                            ${ad.status}
+                        </span>
+                    </td>
+                    <td>${ad.views}</td>
+                    <td>${new Date(ad.createdAt).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

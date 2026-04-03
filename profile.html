@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - My Ads</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">📦 My Ads</a>
+            <div class="nav-links" id="authLinks"></div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container" style="max-width: 500px;">
+            <h1 class="form-title">My Profile</h1>
+            <form id="profileForm">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="email" disabled>
+                    <small style="color: var(--text-secondary);">Email cannot be changed</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" id="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-input" id="phone">
+                </div>
+                
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+                <div id="successMessage" style="color: var(--success-color); margin-bottom: 1rem; display: none;"></div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                    Update Profile
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!requireAuth()) {
+            throw new Error('Authentication required');
+        }
+
+        // Load profile data
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const user = await getProfile();
+                document.getElementById('email').value = user.email;
+                document.getElementById('name').value = user.name;
+                document.getElementById('phone').value = user.phoneNumber || '';
+            } catch (error) {
+                alert('Failed to load profile: ' + error.message);
+            }
+        });
+
+        // Update profile
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+            
+            try {
+                await updateProfile(name, phone);
+                successDiv.textContent = 'Profile updated successfully!';
+                successDiv.style.display = 'block';
+                errorDiv.style.display = 'none';
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
